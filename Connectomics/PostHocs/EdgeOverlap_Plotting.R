@@ -1,10 +1,6 @@
 
-# Usage — set the paths below, then run run_cpm_overlap() (or source file first)
-
-# !!!!!NOTE!!!! 
-# assumes masks are 0/1 (or >=0/<=0) edge indicators.
-# If mask files are weights, then treated as
-#  > 0 for pos and value > 0 for neg before union.
+#~~~~assumes masks are 0/1 (or >=0/<=0) edge indicators~~~~#
+# If mask files are weights, then treated as > 0 for pos and value > 0 for neg before union.
 
 suppressPackageStartupMessages({
   library(sf)
@@ -17,15 +13,17 @@ suppressPackageStartupMessages({
   library(readr)
 })
 
-# ---------- EDIT THESE PATHS ---------- #
-paths <- list(
-  positive_combined = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/CombinedDHEA/net_pos_thresh_1.0.txt",
-  negative_combined = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/CombinedDHEA/net_neg_thresh_1.0.txt",
-  positive_group1 = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/MaleDHEA/net_pos_thresh_1.0.txt",
-  negative_group1 = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/MaleDHEA/net_neg_thresh_1.0.txt",
-  positive_group2  = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/FemaleDHEA/net_pos_thresh_1.0.txt",
-  negative_group2  = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/FemaleDHEA/net_neg_thresh_1.0.txt"
-)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~EDIT THESE PATHS~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# "Combined notation is from old code when this script was more study specific. can be considered third group but will be given the top circle in the venn diagram plot
+paths <- list(positive_combined = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/CombinedPDS/net_pos_thresh_1.0.txt",
+              negative_combined = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/CombinedPDS/net_neg_thresh_1.0.txt",
+              positive_group1 = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/MalePDS/net_pos_thresh_1.0.txt",
+              negative_group1 = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/MalePDS/net_neg_thresh_1.0.txt",
+              positive_group2  = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/FemalePDS/net_pos_thresh_1.0.txt",
+              negative_group2  = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/FemalePDS/net_neg_thresh_1.0.txt")
 
 # ---------- Helper functions ---------- #
 read_mask_txt <- function(path) {
@@ -54,10 +52,8 @@ upper_edge_names <- function(mask) {
 # Count positive and negative edges separately (>0) in upper triangle
 count_pos_neg <- function(pos_group1at, neg_group1at) {
   UT <- upper.tri(pos_group1at)
-  c(
-    total_pos = sum(pos_group1at[UT] > 0, na.rm = TRUE),
-    total_neg = sum(neg_group1at[UT] > 0, na.rm = TRUE)
-  )
+  c(total_pos = sum(pos_group1at[UT] > 0, na.rm = TRUE),
+    total_neg = sum(neg_group1at[UT] > 0, na.rm = TRUE))
 }
 
 # Convert back from "i_j" to (i, j) data frame for any set of edges
@@ -68,13 +64,13 @@ edges_to_ij <- function(edge_names) {
 }
 
 # Create 3-circle Venn geometry using sf
-make_venn_circles <- function(r = 1.25, s = 1.6) {
+make_venn_circles <- function(labels = c("Combined","Group 1","Group 2"), r = 1.25, s = 1.6) {
+  stopifnot(length(labels) == 3)
   h <- sqrt(3)/2 * s
   centers <- tibble(
-    name = c("Combined", "Group 1", "Group 2"),
+    name = labels,
     x    = c(0, -s/2, s/2),
-    y    = c(h/2, 0, 0)
-  )
+    y    = c(h/2, 0, 0))
   geoms <- mapply(function(x, y) st_buffer(st_sfc(st_point(c(x, y))), dist = r),
                   centers$x, centers$y, SIMPLIFY = FALSE)
   sfc_circles <- do.call(c, geoms)
@@ -83,24 +79,28 @@ make_venn_circles <- function(r = 1.25, s = 1.6) {
 }
 
 # Build region polygons + counts for a,b,c sets
-build_regions <- function(circles, set_combined, set_group1, set_group2) {
-  only_combined  <- st_difference(circles$geometry[1], st_union(circles$geometry[2:3]))[[1]]
-  only_group1  <- st_difference(circles$geometry[2], st_union(circles$geometry[c(1,3)]))[[1]]
-  only_group2  <- st_difference(circles$geometry[3], st_union(circles$geometry[1:2]))[[1]]
-  int_combined_group1  <- st_difference(st_intersection(circles$geometry[1], circles$geometry[2]), circles$geometry[3])[[1]]
-  int_combined_group2  <- st_difference(st_intersection(circles$geometry[1], circles$geometry[3]), circles$geometry[2])[[1]]
-  int_group1_group2  <- st_difference(st_intersection(circles$geometry[2], circles$geometry[3]), circles$geometry[1])[[1]]
-  int_combined_group1_group2 <- st_intersection(st_intersection(circles$geometry[1], circles$geometry[2]), circles$geometry[3])[[1]]
+build_regions <- function(circles, set_combined, set_group1, set_group2,
+                          labels = c("Combined","Group 1","Group 2")) {
+  L1 <- labels[1]; L2 <- labels[2]; L3 <- labels[3]
+  
+  only_1  <- st_difference(circles$geometry[1], st_union(circles$geometry[2:3]))[[1]]
+  only_2  <- st_difference(circles$geometry[2], st_union(circles$geometry[c(1,3)]))[[1]]
+  only_3  <- st_difference(circles$geometry[3], st_union(circles$geometry[1:2]))[[1]]
+  
+  int_12  <- st_difference(st_intersection(circles$geometry[1], circles$geometry[2]), circles$geometry[3])[[1]]
+  int_13  <- st_difference(st_intersection(circles$geometry[1], circles$geometry[3]), circles$geometry[2])[[1]]
+  int_23  <- st_difference(st_intersection(circles$geometry[2], circles$geometry[3]), circles$geometry[1])[[1]]
+  int_123 <- st_intersection(st_intersection(circles$geometry[1], circles$geometry[2]), circles$geometry[3])[[1]]
   
   regions <- st_sf(
-    region   = c("Only Combined", "Only Group 1", "Only Group 2",
-                 "Combined & Group 1", "Combined & Group 2", "Group 1 & Group 2", "All three"),
-    geometry = st_sfc(only_combined, only_group1, only_group2, int_combined_group1, int_combined_group2, int_group1_group2, int_combined_group1_group2))
+    region   = c(paste("Only", L1), paste("Only", L2), paste("Only", L3),
+                 paste(L1, "&", L2), paste(L1, "&", L3), paste(L2, "&", L3), "All three"),
+    geometry = st_sfc(only_1, only_2, only_3, int_12, int_13, int_23, int_123))
   
   regions$count <- c(
     length(setdiff(set_combined, union(set_group1, set_group2))),
-    length(setdiff(set_group1, union(set_combined, set_group2))),
-    length(setdiff(set_group2, union(set_combined, set_group1))),
+    length(setdiff(set_group1,  union(set_combined, set_group2))),
+    length(setdiff(set_group2,  union(set_combined, set_group1))),
     length(setdiff(intersect(set_combined, set_group1), set_group2)),
     length(setdiff(intersect(set_combined, set_group2), set_group1)),
     length(setdiff(intersect(set_group1, set_group2), set_combined)),
@@ -109,8 +109,11 @@ build_regions <- function(circles, set_combined, set_group1, set_group2) {
   regions
 }
 
-# Make Venn plot
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~Create Venn Diagram~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 make_venn_plot <- function(regions, circles, centers, totals,
+                           labels = c("Combined","Group 1","Group 2"),
                            green_base = "#2B7A0B", purple_base = "#8E44AD",
                            orange_base = "#FF6A00", white_base = "grey") {
   
@@ -118,36 +121,28 @@ make_venn_plot <- function(regions, circles, centers, totals,
   
   regions <- regions %>%
     mutate(
-      fill_color = case_when( #if you want to color other areas of venn diagram then uncomment here 
-      #  region == "Only Combined"     ~ lighten(orange_base,  rescale(count / total_unique_edges, to = c(0.1, 0.005))),
-       # region == "Only Group 1"         ~ lighten(green_base,   rescale(count / total_unique_edges, to = c(0.9, 0.1))),
-       # region == "Only Group 2"       ~ lighten(purple_base,  rescale(count / total_unique_edges, to = c(0.4, 0.1))),
-        region == "Combined & Group 1"   ~ lighten(green_base,   rescale(count / total_unique_edges, to = c(0.1, 0.1))),
-        region == "Combined & Group 2" ~ lighten(purple_base,  rescale(count / total_unique_edges, to = c(0.1, 0.1))),
-        region == "All three"         ~ lighten(orange_base,  rescale(count / total_unique_edges, to = c(0.1, 0.1))),
-        region == "Group 1 & Group 2"     ~ lighten(white_base,   rescale(count / total_unique_edges, to = c(0.9, 0.1)))
-      )
-    )
+      fill_color = case_when(
+        region == paste(labels[1], "&", labels[2]) ~ lighten(green_base, 0.1),
+        region == paste(labels[1], "&", labels[3]) ~ lighten(purple_base, 0.1),
+        region == "All three"                      ~ lighten(orange_base, 0.1),
+        region == paste(labels[2], "&", labels[3]) ~ lighten(white_base,  0.1)))
   
   cent <- st_point_on_surface(st_geometry(regions))
   coords <- st_coordinates(cent)
   regions <- bind_cols(regions, as_tibble(coords))
   
+  # label positions by index (avoid name matching)
+  centers$idx <- seq_len(nrow(centers))
   label_pos <- centers %>%
-    left_join(totals %>% select(name, total), by = "name") %>%
+    left_join(totals %>% select(name, total), by = c("name" = "name")) %>%
     mutate(
       label   = paste(name, paste0("Total = ", total), sep = "\n"),
-      label_x = case_when(
-        name == "Combined" ~ x,
-        name == "Group 1"         ~ x - (1.25 - 0.1),
-        name == "Group 2"       ~ x + (1.25 - 0.1)
-      ),
-      label_y = case_when(
-        name == "Combined" ~ y + (1.25 + 0.4),
-        name == "Group 1"         ~ y - (1.25 + 0.1),
-        name == "Group 2"       ~ y - (1.25 + 0.1)
-      )
-    )
+      label_x = case_when(idx == 1 ~ x,
+                          idx == 2 ~ x - (1.25 - 0.1),
+                          idx == 3 ~ x + (1.25 - 0.1)),
+      label_y = case_when(idx == 1 ~ y + (1.25 + 0.4),
+                          idx == 2 ~ y - (1.25 + 0.1),
+                          idx == 3 ~ y - (1.25 + 0.1)))
   
   ggplot() +
     geom_sf(data = regions, aes(fill = fill_color), color = NA) +
@@ -159,17 +154,19 @@ make_venn_plot <- function(regions, circles, centers, totals,
     coord_sf(datum = NA, clip = "off", expand = TRUE) +
     theme_void() +
     theme(
-      legend.position  = "none",
-      plot.margin      = margin(1, 1, 1, 1, "cm"),
-      plot.title       = element_text(hjust = 0.5, family = "Arial", face = "bold", size = 12)
-    ) 
+      legend.position = "none",
+      plot.margin     = margin(1, 1, 1, 1, "cm"),
+      plot.title      = element_text(hjust = 0.5, family = "Arial", face = "bold", size = 12))
 }
 
-# MAIN CODE
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~MAIN CODE~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 run_cpm_overlap <- function(paths,
-                            save_plot = NULL,   # e.g., "~/Desktop/overlap.png" or ".pdf"
-                            save_table = NULL   # e.g., "~/Desktop/overlap_counts.csv"
-) {
+                            labels = c("Combined", "Group 1", "Group 2"),
+                            save_plot = NULL,
+                            save_table = NULL) {
+  stopifnot(length(labels) == 3) 
   # Read masks
   pos_combined <- read_mask_txt(paths$positive_combined); neg_combined <- read_mask_txt(paths$negative_combined)
   pos_group1 <- read_mask_txt(paths$positive_group1); neg_group1 <- read_mask_txt(paths$negative_group1)
@@ -196,36 +193,32 @@ run_cpm_overlap <- function(paths,
   counts_f <- count_pos_neg(pos_group2, neg_group2)
   
   totals_tbl <- tibble(
-    name  = c("Combined", "Group 1", "Group 2"),
+    name  = labels,
     total = c(length(set_combined), length(set_group1), length(set_group2)),
-    sets  = list(set_combined, set_group1, set_group2)
-  )
+    sets  = list(set_combined, set_group1, set_group2))
   
   # Summary tables for each group
   tbl_summary_combined <- tibble(
     Metric = c("Total Positive", "Total Negative", "Overlap with Group 1", "Overlap with Group 2"),
     Count  = c(counts_c["total_pos"], counts_c["total_neg"],
-               length(intersect(set_combined, set_group1)), length(intersect(set_combined, set_group2)))
-  )
+               length(intersect(set_combined, set_group1)), length(intersect(set_combined, set_group2))))
   
   tbl_summary_group1 <- tibble(
     Metric = c("Total Positive", "Total Negative", "Overlap with Combined", "Overlap with Group 2"),
     Count  = c(counts_m["total_pos"], counts_m["total_neg"],
-               length(intersect(set_group1, set_combined)), length(intersect(set_group1, set_group2)))
-  )
+               length(intersect(set_group1, set_combined)), length(intersect(set_group1, set_group2))))
   
   tbl_summary_group2 <- tibble(
     Metric = c("Total Positive", "Total Negative", "Overlap with Combined", "Overlap with Group 1"),
     Count  = c(counts_f["total_pos"], counts_f["total_neg"],
-               length(intersect(set_group2, set_combined)), length(intersect(set_group2, set_group1)))
-  )
+               length(intersect(set_group2, set_combined)), length(intersect(set_group2, set_group1))))
   
   # Build Venn circle + regions
-  vg <- make_venn_circles(r = 1.25, s = 1.6)
-  regions <- build_regions(vg$circles, set_combined, set_group1, set_group2)
+  vg      <- make_venn_circles(labels = labels, r = 1.25, s = 1.6)
+  regions <- build_regions(vg$circles, set_combined, set_group1, set_group2, labels = labels)
   
   # Plot
-  venn_plot <- make_venn_plot(regions, vg$circles, vg$centers, totals_tbl)
+  venn_plot <- make_venn_plot(regions, vg$circles, vg$centers, totals_tbl, labels = labels)
   
   # save 
   if (!is.null(save_plot)) {
@@ -237,35 +230,56 @@ run_cpm_overlap <- function(paths,
   }
   
   # Intersections for (i,j) pairs
-  inter_combined_group1  <- intersect(set_combined, set_group1)
-  inter_combined_group2  <- intersect(set_combined, set_group2)
-  inter_group1_group2  <- intersect(set_group1, set_group2)
-  inter_combined_group1_group2 <- Reduce(intersect, list(set_combined, set_group1, set_group2))
+  inter_combined_group1          <- intersect(set_combined, set_group1)
+  inter_combined_group2          <- intersect(set_combined, set_group2)
+  inter_group1_group2            <- intersect(set_group1,  set_group2)
+  inter_combined_group1_group2   <- Reduce(intersect, list(set_combined, set_group1, set_group2))
   
   list(
-    sets = list(
-      Combined       = set_combined,
-      Group1         = set_group1,
-      Group2         = set_group2
-    ),
-    intersections = list(
-      'C_and_1'  = edges_to_ij(inter_combined_group1),
-      'C_and_2'  = edges_to_ij(inter_combined_group2),
-      '1_and_2'  = edges_to_ij(inter_group1_group2),
-      'All3'     = edges_to_ij(inter_combined_group1_group2)
-    ),
-    summaries    = list(
-      combined   = tbl_summary_combined,
-      group1     = tbl_summary_group1,
-      group2     = tbl_summary_group2
-    ),
+    sets = setNames(
+      list(set_combined, set_group1, set_group2),
+      labels),
+    intersections = setNames(
+      list(
+        edges_to_ij(inter_combined_group1),
+        edges_to_ij(inter_combined_group2),
+        edges_to_ij(inter_group1_group2),
+        edges_to_ij(inter_combined_group1_group2)),
+      c(paste(labels[1],"&",labels[2]),
+        paste(labels[1],"&",labels[3]),
+        paste(labels[2],"&",labels[3]),
+        "All three")),
+    summaries = setNames(
+      list(
+        tibble(Metric = c("Total Positive","Total Negative",
+                          paste("Overlap with", labels[2]),
+                          paste("Overlap with", labels[3])),
+               Count  = c(counts_c["total_pos"], counts_c["total_neg"],
+                          length(intersect(set_combined, set_group1)),
+                          length(intersect(set_combined, set_group2)))),
+        tibble(Metric = c("Total Positive","Total Negative",
+                          paste("Overlap with", labels[1]),
+                          paste("Overlap with", labels[3])),
+               Count  = c(counts_m["total_pos"], counts_m["total_neg"],
+                          length(intersect(set_group1, set_combined)),
+                          length(intersect(set_group1, set_group2)))),
+        tibble(Metric = c("Total Positive","Total Negative",
+                          paste("Overlap with", labels[1]),
+                          paste("Overlap with", labels[2])),
+               Count  = c(counts_f["total_pos"], counts_f["total_neg"],
+                          length(intersect(set_group2, set_combined)),
+                          length(intersect(set_group2, set_group1))))),
+      labels),
     regions_table = regions %>% st_drop_geometry(),
-    venn_plot = venn_plot
-  )
+    venn_plot = venn_plot)
 }
 
-
-result <- run_cpm_overlap(paths,
-                          save_plot  = NULL, # add path instead of NULL
-                          save_table = NULL) # add path instead of NULL (save as .csv)
-result
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~Run CPM Overlap Function~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+result <- run_cpm_overlap(
+  paths,
+  labels = c("Sex-agnostic", "Male", "Female"),   # update as needed 
+  save_plot  = NULL,
+  save_table = NULL)
+result$venn_plot
