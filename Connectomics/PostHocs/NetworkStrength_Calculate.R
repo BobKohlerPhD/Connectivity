@@ -17,7 +17,7 @@ strength_df <- purrr::map_dfr(names(mats), function(id) {
   pos_strength  <- sum(vec[vec > 0], na.rm = TRUE)
   neg_strength  <- sum(vec[vec < 0], na.rm = TRUE)    
   both_strength <- pos_strength - neg_strength        # adds magnitude of negatives but can change to absolute value if preferred 
- 
+
    tibble(
     subject_id    = id,
     pos_strength  = pos_strength,

@@ -1,27 +1,31 @@
-
 library(sf)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(gt)
 library(colorspace)
 library(scales)
- sibrary(readr)
+library(readr)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~EDIT THESE PATHS~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# "Combined notation is from old code when this script was more study specific. can be considered third group but will be given the top circle in the venn diagram plot
-paths <- list(positive_combined = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/mid_net_pos_thresh_1.0.txt',
-              negative_combined = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/mid_net_neg_thresh_1.0.txt',
-              positive_group1 = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/nback_net_pos_thresh_1.0.txt',
-              negative_group1 = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/nback_net_neg_thresh_1.0.txt',
-              positive_group2  = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/sst_net_pos_thresh_1.0.txt',
-              negative_group2  = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/sst_net_neg_thresh_1.0.txt')
+base_dir <- ""
 
-# ---------- Helper functions ---------- #
+# Combined notation is from old code when this script was more study specific.
+# Can use "combined" as group3
+
+paths <- list(
+positive_combined = 'output/ca_method_1/net_thresh_meth1/mid_net_pos_thresh_1.0.txt',
+negative_combined = 'output/ca_method_1/net_thresh_meth1/mid_net_neg_thresh_1.0.txt',
+positive_group1   = 'output/ca_method_1/net_thresh_meth1/nback_net_pos_thresh_1.0.txt',
+negative_group1   = 'output/ca_method_1/net_thresh_meth1/nback_net_neg_thresh_1.0.txt',
+positive_group2   = 'output/ca_method_1/net_thresh_meth1/sst_net_pos_thresh_1.0.txt',
+negative_group2   = 'output/ca_method_1/net_thresh_meth1/sst_net_neg_thresh_1.0.txt'
+)
+
+# Read mask 
 read_mask_txt <- function(path) {
   stopifnot(file.exists(path))
   as.matrix(read.table(path, header = FALSE))
@@ -126,8 +130,7 @@ make_venn_plot <- function(regions, circles, centers, totals,
   cent <- st_point_on_surface(st_geometry(regions))
   coords <- st_coordinates(cent)
   regions <- bind_cols(regions, as_tibble(coords))
-  
-  # label positions by index (avoid name matching)
+  # label positions by index 
   centers$idx <- seq_len(nrow(centers))
   label_pos <- centers %>%
     left_join(totals %>% select(name, total), by = c("name" = "name")) %>%
@@ -142,21 +145,30 @@ make_venn_plot <- function(regions, circles, centers, totals,
   ggplot() +
     geom_sf(data = regions, aes(fill = fill_color), color = NA) +
     geom_sf(data = circles, fill = NA, color = "black", linewidth = 3) +
-    geom_text(data = regions, aes(X, Y, label = count), size = 12, family = "Arial") +
+    geom_text(
+              data = regions, 
+              aes(X, Y, label = count), 
+              size = 12,
+              family = "Arial") +
     geom_text(data = label_pos, aes(label_x, label_y, label = label),
               size = 14, family = "Arial", lineheight = 0.9) +
     scale_fill_identity() +
     coord_sf(datum = NA, clip = "off", expand = TRUE) +
     theme_void() +
     theme(
-      legend.position = "none",
-      plot.margin     = margin(1, 1, 1, 1, "cm"),
-      plot.title      = element_text(hjust = 0.5, family = "Arial", face = "bold", size = 12))
+          legend.position = "none",
+          plot.margin     = margin(1, 1, 1, 1, "cm"),
+          plot.title      = element_text(
+            hjust = 0.5,
+            family = "Arial", 
+            face = "bold",
+            size = 12))
 }
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~MAIN CODE~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 run_cpm_overlap <- function(paths,
                             labels = c("Combined", "Group 1", "Group 2"),
                             save_plot = NULL,
@@ -171,65 +183,68 @@ run_cpm_overlap <- function(paths,
   dims <- rbind(dim(pos_combined), dim(neg_combined), dim(pos_group1), dim(neg_group1), dim(pos_group2), dim(neg_group2))
   if (length(unique(apply(dims, 1, paste, collapse = "x"))) != 1)
     stop("All input matrices must have the same dimensions.")
-  
   # Union masks
   mask_combined <- make_union_mask(pos_combined, neg_combined)
   mask_group1 <- make_union_mask(pos_group1, neg_group1)
   mask_group2 <- make_union_mask(pos_group2, neg_group2)
-  
   # Edge sets (upper triangle only)
   set_combined <- upper_edge_names(mask_combined)
   set_group1 <- upper_edge_names(mask_group1)
   set_group2 <- upper_edge_names(mask_group2)
-  
   # Totals per circle for labels
   counts_c <- count_pos_neg(pos_combined, neg_combined)
   counts_m <- count_pos_neg(pos_group1, neg_group1)
   counts_f <- count_pos_neg(pos_group2, neg_group2)
-  
   totals_tbl <- tibble(
     name  = labels,
     total = c(length(set_combined), length(set_group1), length(set_group2)),
     sets  = list(set_combined, set_group1, set_group2))
-  
+
   # Summary tables for each group
   tbl_summary_combined <- tibble(
     Metric = c("Total Positive", "Total Negative", "Overlap with Group 1", "Overlap with Group 2"),
     Count  = c(counts_c["total_pos"], counts_c["total_neg"],
                length(intersect(set_combined, set_group1)), length(intersect(set_combined, set_group2))))
-  
+
   tbl_summary_group1 <- tibble(
-    Metric = c("Total Positive", "Total Negative", "Overlap with Combined", "Overlap with Group 2"),
-    Count  = c(counts_m["total_pos"], counts_m["total_neg"],
-               length(intersect(set_group1, set_combined)), length(intersect(set_group1, set_group2))))
-  
+    Metric = c(
+      "Total Positive",
+      "Total Negative",
+      "Overlap with Combined",
+      "Overlap with Group 2"),
+    Count  = c(
+      counts_m["total_pos"],
+      counts_m["total_neg"],
+               length(intersect(set_group1, set_combined)),
+               length(intersect(set_group1, set_group2))))
+
   tbl_summary_group2 <- tibble(
     Metric = c("Total Positive", "Total Negative", "Overlap with Combined", "Overlap with Group 1"),
     Count  = c(counts_f["total_pos"], counts_f["total_neg"],
                length(intersect(set_group2, set_combined)), length(intersect(set_group2, set_group1))))
-  
+
   # Build Venn circle + regions
   vg      <- make_venn_circles(labels = labels, r = 1.25, s = 1.6)
   regions <- build_regions(vg$circles, set_combined, set_group1, set_group2, labels = labels)
-  
+
   # Plot
   venn_plot <- make_venn_plot(regions, vg$circles, vg$centers, totals_tbl, labels = labels)
-  
+
   # save 
   if (!is.null(save_plot)) {
     ggsave(filename = save_plot, plot = venn_plot, width = 8, height = 6, dpi = 300)
   }
-  
+
   if (!is.null(save_table)) {
     write_csv(regions %>% st_drop_geometry(), save_table)
   }
-  
+
   # Intersections for (i,j) pairs
   inter_combined_group1          <- intersect(set_combined, set_group1)
   inter_combined_group2          <- intersect(set_combined, set_group2)
   inter_group1_group2            <- intersect(set_group1,  set_group2)
   inter_combined_group1_group2   <- Reduce(intersect, list(set_combined, set_group1, set_group2))
-  
+
   list(
     sets = setNames(
       list(set_combined, set_group1, set_group2),
@@ -274,7 +289,7 @@ run_cpm_overlap <- function(paths,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 result <- run_cpm_overlap(
   paths,
-  labels = c("MID", "NBACK", "SST"),   # update as needed 
+  labels = c("MID", "NBACK", "SST"),   
   save_plot  = NULL,
   save_table = NULL)
 result$venn_plot

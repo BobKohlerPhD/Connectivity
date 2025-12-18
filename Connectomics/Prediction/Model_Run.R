@@ -8,7 +8,7 @@ library(parallel)
 library(fs)
 library(stringr)
 library(lubridate)
-library(ppcor) 
+library(ppcor)
 
 #~~Model~~#
 train_cpm <- function(train_mat, 
@@ -38,7 +38,7 @@ train_cpm <- function(train_mat,
     r_lst <- sapply(corr_train, `[[`, "estimate")
     p_lst <- sapply(corr_train, `[[`, "p.value")
   }
-  
+
   # Create empty matrices
   r_mat <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
   p_mat <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
@@ -114,8 +114,7 @@ kfold_cpm <- function(x, y, k,
     fit_n = vector("list", k),
     fit_b = vector("list", k),
     edges_p = vector("list", k),
-    edges_n = vector("list", k)
-  )
+    edges_n = vector("list", k))
   
   for (fold in seq_len(k)) {
     test_inds <- if (fold != k) {
@@ -163,9 +162,10 @@ run_cpm_thread <- function(y, iter, x, k, out_path, p_thresh = 0.05, zscore = FA
   save_run_outputs(out_path, iter, results, y, mode)
 }
 
-#----------------------------------------#
-#----------Utility Functions-------------#
-#----------------------------------------#
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~Other Functions~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 save_run_outputs_subsample_nogrid <- function(out_path, iter, outputs, y) {
   for (fold in seq_along(outputs$edges_p)) {

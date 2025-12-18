@@ -1,10 +1,10 @@
 #~~~Requires thresholded masks~~~#
-
 library(tidyverse)
 library(R.matlab)
 library(stringr)
 library(reshape2)
 library(scales)
+library(ggplot2)
 
 
 # Paths to CPM output folder and shen atlas config 
@@ -259,7 +259,7 @@ create_heatmap_plot_negative <- function(data, x, y, fill, x_labels, y_labels) {
   min_fill  <- min(plot_data[[fill]], na.rm = TRUE)
   max_fill  <- max(plot_data[[fill]], na.rm = TRUE)
   threshold <- (min_fill + max_fill) / 2
-  
+
   ggplot(plot_data, aes_string(x = x, y = y, fill = fill)) +
     geom_tile(color = "black", size = 0.5) +
     geom_text(aes_string(label = fill,
@@ -289,8 +289,7 @@ create_heatmap_plot_negative <- function(data, x, y, fill, x_labels, y_labels) {
       axis.text.x.top   = element_blank(),
       axis.text.y       = element_text(color = "black", size = 16),
       axis.text.y.right = element_blank(),
-      legend.position   = "none"
-    )
+      legend.position   = "none")
 }
 # Melt, reverse y labels, plot, and save
 df_pos_melt <- melt(as.matrix(df_pos), varnames = c("x", "y"), value.name = "value")

@@ -303,5 +303,3 @@ r_true_df <- data.frame(Positive = r_pos_true,
 
 output_file <- file.path(read_path, "boxplot_performance.jpeg")
 #ggsave(filename = output_file, plot = r_true_boxplot, dpi = 300, width = 8, height = 6, units = "in")
-
-                              
