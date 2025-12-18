@@ -1,29 +1,25 @@
 
-#~~~~assumes masks are 0/1 (or >=0/<=0) edge indicators~~~~#
-# If mask files are weights, then treated as > 0 for pos and value > 0 for neg before union.
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gt)
+library(colorspace)
+library(scales)
+ sibrary(readr)
 
-suppressPackageStartupMessages({
-  library(sf)
-  library(ggplot2)
-  library(dplyr)
-  library(tidyr)
-  library(gt)
-  library(colorspace)
-  library(scales)
-  library(readr)
-})
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~EDIT THESE PATHS~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 # "Combined notation is from old code when this script was more study specific. can be considered third group but will be given the top circle in the venn diagram plot
-paths <- list(positive_combined = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/CombinedPDS/net_pos_thresh_1.0.txt",
-              negative_combined = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/CombinedPDS/net_neg_thresh_1.0.txt",
-              positive_group1 = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/MalePDS/net_pos_thresh_1.0.txt",
-              negative_group1 = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/MalePDS/net_neg_thresh_1.0.txt",
-              positive_group2  = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/FemalePDS/net_pos_thresh_1.0.txt",
-              negative_group2  = "/Users/bobkohler/Desktop/Manuscripts/Hormone CPM/CPM Hormone Output/ExtractedNetworks/FemalePDS/net_neg_thresh_1.0.txt")
+paths <- list(positive_combined = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/mid_net_pos_thresh_1.0.txt',
+              negative_combined = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/mid_net_neg_thresh_1.0.txt',
+              positive_group1 = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/nback_net_pos_thresh_1.0.txt',
+              negative_group1 = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/nback_net_neg_thresh_1.0.txt',
+              positive_group2  = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/sst_net_pos_thresh_1.0.txt',
+              negative_group2  = '/Users/bobkohler/Desktop/Current Work/CumulativeAdversityCPM/output/ca_method_1/net_thresh_meth1/sst_net_neg_thresh_1.0.txt')
 
 # ---------- Helper functions ---------- #
 read_mask_txt <- function(path) {
@@ -136,14 +132,13 @@ make_venn_plot <- function(regions, circles, centers, totals,
   label_pos <- centers %>%
     left_join(totals %>% select(name, total), by = c("name" = "name")) %>%
     mutate(
-      label   = paste(name, paste0("Total = ", total), sep = "\n"),
+      label = paste(name, paste0("Total = ", total), sep = "\n"),
       label_x = case_when(idx == 1 ~ x,
                           idx == 2 ~ x - (1.25 - 0.1),
                           idx == 3 ~ x + (1.25 - 0.1)),
       label_y = case_when(idx == 1 ~ y + (1.25 + 0.4),
                           idx == 2 ~ y - (1.25 + 0.1),
                           idx == 3 ~ y - (1.25 + 0.1)))
-  
   ggplot() +
     geom_sf(data = regions, aes(fill = fill_color), color = NA) +
     geom_sf(data = circles, fill = NA, color = "black", linewidth = 3) +
@@ -279,7 +274,7 @@ run_cpm_overlap <- function(paths,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 result <- run_cpm_overlap(
   paths,
-  labels = c("Sex-agnostic", "Male", "Female"),   # update as needed 
+  labels = c("MID", "NBACK", "SST"),   # update as needed 
   save_plot  = NULL,
   save_table = NULL)
 result$venn_plot

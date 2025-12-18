@@ -125,5 +125,10 @@ results_threeway <- tibble::tibble(
         gt() %>%
         fmt_number(columns = "Value", decimals = 4) %>%
         tab_header(
-                title = "Female ∩ Male ∩ Sex-Agnostic") #update as needed
+                title = "Female ∩ Male ∩ Sex-Agnostic") 
 print(results_threeway)
+
+
+
+
+
