@@ -14,7 +14,7 @@ run.log
 *.rds
 
 # LLM-related assets
-docs/superpowers/
+./docs/superpowers/
 .gemini/
 .geminiignore
 .claude/
