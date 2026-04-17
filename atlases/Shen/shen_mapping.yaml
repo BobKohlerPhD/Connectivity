@@ -1,0 +1,16 @@
+name: "Shen"
+num_nodes: 268
+network_labels:
+  - "Medial Frontal"
+  - "Frontoparietal"
+  - "Default"
+  - "Motor/Sensory"
+  - "Visual"
+  - "Visual B"
+  - "Visual Association"
+  - "Salience"
+  - "Subcortical"
+  - "Brainstem & Cerebellum"
+node_list: "Connectomics/AtlasConfigs/ShenAtlasConfig/NodeList.txt"
+canonical_nodes: "Connectomics/AtlasConfigs/ShenAtlasConfig/canonical_nodes.mat"
+network_config: "Connectomics/AtlasConfigs/ShenAtlasConfig/node_to_network_config.mat"

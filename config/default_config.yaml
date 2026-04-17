@@ -1,0 +1,20 @@
+project_name: "Connectivity_Study_2026"
+output_dir: "./results"
+
+data:
+  matrices: ""
+  outcomes: ""
+  subject_id_var: "subject_id"
+  outcome_var: "outcome"
+  covariates: []
+
+cpm_params:
+  k_folds: 10
+  iterations: 100
+  p_threshold: 0.05
+  mode: "linear"
+  z_score: true
+
+atlas:
+  name: "Shen"
+  mapping_file: "atlases/Shen/shen_mapping.yaml"
