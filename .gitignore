@@ -1,3 +1,14 @@
 .DS_Store
 .Rhistory
 
+
+# Pipeline Outputs
+results/
+test_results/
+run.log
+
+# R-specific temporary files
+.RData
+.Rhistory
+.Rproj.user/
+*.rds
