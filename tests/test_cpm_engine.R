@@ -45,4 +45,17 @@ test_that("train_cpm handles covariates with partial correlation", {
   # but here we just want to ensure it works.
   expect_type(res_with_covar$pos_mask, "logical")
   expect_length(res_with_covar$pos_mask, edges)
-})
+  })
+
+  test_that("kfold_cpm returns predictions for all subjects", {
+  set.seed(42)
+  subjects <- 30
+  edges <- 50
+  behav <- rnorm(subjects)
+  mat <- matrix(rnorm(edges * subjects), nrow = edges, ncol = subjects)
+
+  y_pred <- kfold_cpm(mat, behav, k = 5)
+  expect_equal(length(y_pred), subjects)
+  expect_false(any(is.na(y_pred)))
+  })
+
