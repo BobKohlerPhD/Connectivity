@@ -17,3 +17,27 @@ test_that("plot_connectivity_heatmap uses labels correctly", {
   expect_true(all(labels %in% p$data$Var1))
   expect_true(all(labels %in% p$data$Var2))
 })
+
+test_that("plot_connectivity_heatmap rearranges nodes with node_order", {
+  mat <- matrix(0, 2, 2)
+  mat[1, 2] <- 5 # Original: [1,1]=0, [1,2]=5, [2,1]=0, [2,2]=0
+  
+  # Reorder [2, 1]
+  # Rearranged matrix:
+  #            [,1] (orig 2)  [,2] (orig 1)
+  # [1,] (orig 2)    0              0
+  # [2,] (orig 1)    5              0
+  p <- plot_connectivity_heatmap(mat, node_order = c(2, 1))
+  
+  df <- p$data
+  # In as.data.frame.table for a matrix:
+  # Var1 corresponds to rows, Var2 to columns
+  
+  # Get names of first and second levels
+  level1 <- levels(df$Var1)[1]
+  level2 <- levels(df$Var1)[2]
+  
+  val_at_row2_col1 <- df$value[df$Var1 == level2 & df$Var2 == level1] 
+  
+  expect_equal(as.numeric(val_at_row2_col1), 5)
+})
