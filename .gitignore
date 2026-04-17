@@ -12,3 +12,12 @@ run.log
 .Rhistory
 .Rproj.user/
 *.rds
+
+# LLM-related assets
+docs/superpowers/
+.gemini/
+.geminiignore
+.claude/
+.aider/
+.cursor/
+.windsurf/
